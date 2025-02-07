@@ -96,20 +96,21 @@ Mappings:
       Name: dev-iam-role-ec2
   SgParams:
     SgType:
+      Description: SG for EC2
       Ec2Sg: dev-ec2-sg
   KeyPairParams:
     KeyPairType:
       Name: dev-keypair
   Ec2Params:
     Instance1:
-      Name: dev-ec2-instance
+      DeviceName: /dev/xvda
+      RootVolumeSize: RootVolumeSize
       AmiId: LatestAmiId
       InstanceType: InstanceType
-      RootVolumeSize: RootVolumeSize
+      KeyPairName: KeyPair
       SgName: Ec2Sg
       SubnetName: PublicSubnet1a
-      DeviceName: /dev/xvda
-      KeyPairName: KeyPair
+      Name: dev-ec2-instance
 
 # ╔══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════╗
 # ║ EC2 Dev Environment For Remote SSH Stack - CloudFormation Template Resources                                                                     ║
@@ -123,9 +124,9 @@ Mappings:
 # ║ NaclOutEntry100                     │ AWS::EC2::NetworkAclEntry                 │ All Allow Outbound Entry.                                      ║
 # ║ AssocSubnet1                        │ AWS::EC2::SubnetNetworkAclAssociation     │ NACL Association.                                              ║
 # ║ RtbPublic                           │ AWS::EC2::RouteTable                      │ Public Subnet RouteTable.                                      ║
+# ║ RtbPublicEntry1                     │ AWS::EC2::Route                           │ RouteTable Entry 1.                                            ║
 # ║ RtbAssocPublicSubnet1               │ AWS::EC2::SubnetRouteTableAssociation     │ RouteTable Association Public Subnet.                          ║
 # ║ S3GwEp                              │ AWS::EC2::VPCEndpoint                     │ S3 Gateway Endpoint.                                           ║
-# ║ RtbPublicEntry1                     │ AWS::EC2::Route                           │ RouteTable Entry 1.                                            ║
 # ║ Role                                │ AWS::IAM::Role                            │ EC2 IAM Role.                                                  ║
 # ║ InstanceProfile                     │ AWS::IAM::InstanceProfile                 │ EC2 IAM InstanceProfile.                                       ║
 # ║ Ec2Sg                               │ AWS::EC2::SecurityGroup                   │ EC2 SecurityGroup.                                             ║
@@ -156,3 +157,154 @@ Resources:
     Properties:
       VpcId: !Ref Vpc
       InternetGatewayId: !Ref Igw
+
+  PublicSubnet1a:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone: !Sub ${AWS::Region}a
+      CidrBlock: !Ref
+        "Fn::FindInMap": [SubnetParams, PublicSubnet1a, Cidr]
+      VpcId: !Ref Vpc
+      Tags:
+        - Key: Name
+          Value: !FindInMap [SubnetParams, PublicSubnet1a, Name]
+
+  Nacl:
+    Type: AWS::EC2::NetworkAcl
+    Properties:
+      VpcId: !Ref Vpc
+      Tags:
+        - Key: Name
+          Value: !FindInMap [NaclParams, NaclType, Name]
+
+  NaclInEntry100:
+    Type: AWS::EC2::NetworkAclEntry
+    Properties:
+      Egress: false
+      NetworkAclId: !Ref Nacl
+      RuleNumber: 100
+      Protocol: -1
+      RuleAction: allow
+      CidrBlock: 0.0.0.0/0
+
+  NaclOutEntry100:
+    Type: AWS::EC2::NetworkAclEntry
+    Properties:
+      Egress: true
+      NetworkAclId: !Ref Nacl
+      RuleNumber: 100
+      Protocol: -1
+      RuleAction: allow
+      CidrBlock: 0.0.0.0/0
+
+  AssocSubnet1:
+    Type: AWS::EC2::SubnetNetworkAclAssociation
+    Properties:
+      NetworkAclId: !Ref Nacl
+      SubnetId: !Ref PublicSubnet1a
+
+  RtbPublic:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref Vpc
+      Tags:
+        - Key: Name
+          Value: !FindInMap [RtbParams, RtbType, RtbPublic]
+
+  RtbPublicEntry1:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref RtbPublic
+      GatewayId: !Ref Igw
+      DestinationCidrBlock: 0.0.0.0/0
+
+  RtbAssocPublicSubnet1:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref RtbPublic
+      SubnetId: !Ref PublicSubnet1a
+
+  S3GwEp:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      VpcEndpointType: Gateway
+      VpcId: !Ref Vpc
+      ServiceName: !Sub com.amazonaws.${AWS::Region}.s3
+      RouteTableIds:
+        - !Ref RtbPublic
+
+  Role:
+    Type: AWS::IAM::Role
+    Properties:
+      Description: !FindInMap [IamParams, IamType, Description]
+      RoleName: !FindInMap [IamParams, IamType, Name]
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - ec2.amazonaws.com
+            Action:
+              - sts.AssumeRole
+      ManagedPolicyArns:
+        - !Sub "arn:${AWS::Partition}:iam::aws:policy/AmazonSSMManagedInstanceCore"
+      Tags:
+        - Key: Name
+          Value: !FindInMap [IamParams, IamType, Name]
+
+  InstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      InstanceProfileName: !FindInMap [IamParams, IamType, Name]
+      Roles:
+        - !Ref Role
+
+  Ec2Sg:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: !FindInMap [SgParams, SgType, Description]
+      GroupName: !FindInMap [SgParams, SgType, Ec2Sg]
+      VpcId: !Ref Vpc
+      Tags:
+        - Key: Name
+          Value: !FindInMap [SgParams, SgType, Ec2Sg]
+
+  KeyPair:
+    Type: AWS::EC2::KeyPair
+    Properties:
+      KeyFormat: pem
+      KeyType: rsa
+      KeyName: !FindInMap [KeyPairParams, KeyPairType, Name]
+      Tags:
+        - Key: Name
+          Value: !FindInMap [KeyPairParams, KeyPairType, Name]
+
+  Ec2Instance:
+    Type: AWS::EC2::Instance
+    Properties:
+      BlockDeviceMappings:
+        - DeviceName: !FindInMap [Ec2Params, Instance1, DeviceName]
+          Ebs:
+            DeleteOnTermination: true
+            Encrypted: true
+            VolumeSize: !Ref
+              "Fn::FindInMap": [Ec2Params, Instance1, RootVolumeSize]
+            VolumeType: gp3
+      DisableApiTermination: false
+      EbsOptimized: false
+      IamInstanceProfile: !Ref InstanceProfile
+      ImageId: !Ref
+        "Fn::FindInMap": [Ec2Params, Instance1, AmiId]
+      InstanceType: !Ref
+        "Fn::FindInMap": [Ec2Params, Instance1, InstanceType]
+      KeyName: !Ref
+        "Fn::FindInMap": [Ec2Params, Instance1, KeyPairName]
+      SecurityGroupIds:
+        - !Ref
+          "Fn::FindInMap": [Ec2Params, Instance1, SgName]
+      SubnetId: !Ref
+        "Fn::FindInMap": [Ec2Params, Instance1, SubnetName]
+      Tags:
+        - Key: Name
+          Value: !FindInMap [Ec2Params, Instance1, Name]
