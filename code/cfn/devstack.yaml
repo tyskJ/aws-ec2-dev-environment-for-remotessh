@@ -246,7 +246,7 @@ Resources:
               Service:
                 - ec2.amazonaws.com
             Action:
-              - sts.AssumeRole
+              - sts:AssumeRole
       ManagedPolicyArns:
         - !Sub "arn:${AWS::Partition}:iam::aws:policy/AmazonSSMManagedInstanceCore"
       Tags:
@@ -308,3 +308,17 @@ Resources:
       Tags:
         - Key: Name
           Value: !FindInMap [Ec2Params, Instance1, Name]
+
+# ╔══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════╗
+# ║ EC2 Dev Environment For Remote SSH Stack - CloudFormation Template Outputs                                                                       ║
+# ╠═══════════════════════════╤══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════╣
+# ║ GetCommand                │ Get KeyPair Secret Key from SSM Parameter Store.                                                                     ║
+# ╚═══════════════════════════╧══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════╝
+Outputs:
+  GetCommand:
+    Description: Get KeyPair Secret Key from SSM Parameter Store.
+    Value: !Sub
+      - 'aws ssm get-parameter --name "/ec2/keypair/${keypairId}:1" --region ${AWS::Region} --with-decryption --query Parameter.Value --output text --profile admin > keypair.pem && chmod 400 keypair.pem'
+      - keypairId: !GetAtt KeyPair.KeyPairId
+    Export:
+      Name: get-command
