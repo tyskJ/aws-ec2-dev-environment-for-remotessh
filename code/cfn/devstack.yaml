@@ -397,6 +397,6 @@ Outputs:
 
   GetAccessKeyCommand:
     Description: Get KeyPair Secret Key from Secrets Manager.
-    Value: !Sub "aws secretsmanager get-secret-value --secret-id ${Secrets.Id} --profile admin"
+    Value: !Sub "aws secretsmanager get-secret-value --secret-id ${Secrets.Id} --query SecretString --output text --profile admin"
     Export:
       Name: get-accesskey-commnad
