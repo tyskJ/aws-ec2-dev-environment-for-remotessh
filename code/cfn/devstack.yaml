@@ -94,6 +94,15 @@ Mappings:
     IamType:
       Description: IAM Role for EC2 Instance.
       Name: dev-iam-role-ec2
+    SsmPolicy:
+      Description: IAM Policy for SSM Start SSH Session.
+      Name: dev-iam-policy-ssm-ssh
+    SsmGrp:
+      Name: dev-iam-grp-ssm
+      MngPolicy: SsmIamPolicy
+    SsmUser:
+      Name: dev-iam-user-ssm
+      GrpName: IamGrp
   SgParams:
     SgType:
       Description: SG for EC2
@@ -111,6 +120,9 @@ Mappings:
       SgName: Ec2Sg
       SubnetName: PublicSubnet1a
       Name: dev-ec2-instance
+  SecretsParams:
+    Secret1:
+      Name: dev-secrets-manager-credentials
 
 # ╔══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════╗
 # ║ EC2 Dev Environment For Remote SSH Stack - CloudFormation Template Resources                                                                     ║
@@ -132,6 +144,11 @@ Mappings:
 # ║ Ec2Sg                               │ AWS::EC2::SecurityGroup                   │ EC2 SecurityGroup.                                             ║
 # ║ KeyPair                             │ AWS::EC2::KeyPair                         │ KeyPair.                                                       ║
 # ║ Ec2Instance                         │ AWS::EC2::Instance                        │ EC2 Instance.                                                  ║
+# ║ SsmIamPolicy                        │ AWS::IAM::ManagedPolicy                   │ IAM Policy for Start SSH Session.                              ║
+# ║ IamGrp                              │ AWS::IAM::Group                           │ IAM Group for ssm user.                                        ║
+# ║ SsmIamUser                          │ AWS::IAM::User                            │ IAM User for ssm. (not access console)                         ║
+# ║ Accesskey                           │ AWS::IAM::AccessKey                       │ AccessKeyID and SecretAccessKey.                               ║
+# ║ Secrets                             │ AWS::SecretsManager::Secret               │ Secrets for AccessKeyID and SecretAccessKey.                   ║
 # ╚═════════════════════════════════════╧═══════════════════════════════════════════╧════════════════════════════════════════════════════════════════╝
 Resources:
   Vpc:
@@ -164,6 +181,7 @@ Resources:
       AvailabilityZone: !Sub ${AWS::Region}a
       CidrBlock: !Ref
         "Fn::FindInMap": [SubnetParams, PublicSubnet1a, Cidr]
+      MapPublicIpOnLaunch: true
       VpcId: !Ref Vpc
       Tags:
         - Key: Name
@@ -309,16 +327,76 @@ Resources:
         - Key: Name
           Value: !FindInMap [Ec2Params, Instance1, Name]
 
+  SsmIamPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      Description: !FindInMap [IamParams, SsmPolicy, Description]
+      ManagedPolicyName: !FindInMap [IamParams, SsmPolicy, Name]
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: AllowEC2StartStop
+            Effect: Allow
+            Action:
+              - ec2:StartInstances
+              - ec2:StopInstances
+            Resource:
+              - !Sub "arn:${AWS::Partition}:ec2:${AWS::Region}:${AWS::AccountId}:instance/${Ec2Instance}"
+          - Sid: AllowStartSession
+            Effect: Allow
+            Action:
+              - ssm:StartSession
+            Resource:
+              - !Sub "arn:${AWS::Partition}:ec2:${AWS::Region}:${AWS::AccountId}:instance/${Ec2Instance}"
+              - !Sub "arn:${AWS::Partition}:ssm:::document/AWS-StartSSHSession"
+
+  IamGrp:
+    Type: AWS::IAM::Group
+    Properties:
+      GroupName: !FindInMap [IamParams, SsmGrp, Name]
+      ManagedPolicyArns:
+        - !Ref
+          "Fn::FindInMap": [IamParams, SsmGrp, MngPolicy]
+
+  SsmIamUser:
+    Type: AWS::IAM::User
+    Properties:
+      UserName: !FindInMap [IamParams, SsmUser, Name]
+      Groups:
+        - !Ref
+          "Fn::FindInMap": [IamParams, SsmUser, GrpName]
+      Tags:
+        - Key: Name
+          Value: !FindInMap [IamParams, SsmUser, Name]
+
+  Accesskey:
+    Type: AWS::IAM::AccessKey
+    Properties:
+      UserName: !Ref SsmIamUser
+
+  Secrets:
+    Type: AWS::SecretsManager::Secret
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      Name: !FindInMap [SecretsParams, Secret1, Name]
+      SecretString: !Sub '{"AccessKeyId": "${Accesskey}", "SecretAccessKey": "${Accesskey.SecretAccessKey}"}'
+
 # ╔══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════╗
 # ║ EC2 Dev Environment For Remote SSH Stack - CloudFormation Template Outputs                                                                       ║
 # ╠═══════════════════════════╤══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════╣
-# ║ GetCommand                │ Get KeyPair Secret Key from SSM Parameter Store.                                                                     ║
+# ║ GetKeyPairCommand         │ Get KeyPair Secret Key from SSM Parameter Store.                                                                     ║
+# ║ GetAccessKeyCommand       │ Get KeyPair Secret Key from Secrets Manager.                                                                         ║
 # ╚═══════════════════════════╧══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════╝
 Outputs:
-  GetCommand:
+  GetKeyPairCommand:
     Description: Get KeyPair Secret Key from SSM Parameter Store.
-    Value: !Sub
-      - 'aws ssm get-parameter --name "/ec2/keypair/${keypairId}:1" --region ${AWS::Region} --with-decryption --query Parameter.Value --output text --profile admin > keypair.pem && chmod 400 keypair.pem'
-      - keypairId: !GetAtt KeyPair.KeyPairId
+    Value: !Sub 'aws ssm get-parameter --name "/ec2/keypair/${KeyPair.KeyPairId}:1" --region ${AWS::Region} --with-decryption --query Parameter.Value --output text --profile admin > keypair.pem && chmod 400 keypair.pem'
     Export:
-      Name: get-command
+      Name: get-keypair-command
+
+  GetAccessKeyCommand:
+    Description: Get KeyPair Secret Key from Secrets Manager.
+    Value: !Sub "aws secretsmanager get-secret-value --secret-id ${Secrets.Id} --profile admin"
+    Export:
+      Name: get-accesskey-commnad
