@@ -98,5 +98,5 @@
 ---------------------------------------------------------------------
 .. code-block:: bash
 
-  aws s3 rm --recursive s3://cfn-$DATE --profile admin
+  aws s3 rm --recursive s3://cfn-$DATE/ --profile admin
   aws s3 rb s3://cfn-$DATE --profile admin
