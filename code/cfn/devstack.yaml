@@ -348,7 +348,7 @@ Resources:
               - ssm:StartSession
             Resource:
               - !Sub "arn:${AWS::Partition}:ec2:${AWS::Region}:${AWS::AccountId}:instance/${Ec2Instance}"
-              - !Sub "arn:${AWS::Partition}:ssm:::document/AWS-StartSSHSession"
+              - !Sub "arn:${AWS::Partition}:ssm:${AWS::Region}::document/AWS-StartSSHSession"
 
   IamGrp:
     Type: AWS::IAM::Group
@@ -385,10 +385,17 @@ Resources:
 # ╔══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════╗
 # ║ EC2 Dev Environment For Remote SSH Stack - CloudFormation Template Outputs                                                                       ║
 # ╠═══════════════════════════╤══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════╣
+# ║ InstanceId                │ EC2 Instance ID.                                                                                                     ║
 # ║ GetKeyPairCommand         │ Get KeyPair Secret Key from SSM Parameter Store.                                                                     ║
 # ║ GetAccessKeyCommand       │ Get KeyPair Secret Key from Secrets Manager.                                                                         ║
 # ╚═══════════════════════════╧══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════╝
 Outputs:
+  InstanceId:
+    Description: EC2 Instance ID.
+    Value: !Ref Ec2Instance
+    Export:
+      Name: instance-id
+
   GetKeyPairCommand:
     Description: Get KeyPair Secret Key from SSM Parameter Store.
     Value: !Sub 'aws ssm get-parameter --name "/ec2/keypair/${KeyPair.KeyPairId}:1" --region ${AWS::Region} --with-decryption --query Parameter.Value --output text --profile admin > keypair.pem && chmod 400 keypair.pem'
