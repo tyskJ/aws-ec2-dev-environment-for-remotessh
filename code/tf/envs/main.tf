@@ -3,6 +3,7 @@
 # ╠═════════════════╤═══════════════════════════════════╤════════════════════════════════════════════════════════════════════════════════════════════╣
 # ║ nw              │ ./modules/vpc_subnet              │ invoke network module.                                                                     ║
 # ║ iam             │ ./modules/iam                     │ invoke iam module.                                                                         ║
+# ║ ec2             │ ./modules/ec2                     │ invoke ec2 module.                                                                         ║
 # ╚═════════════════╧═══════════════════════════════════╧════════════════════════════════════════════════════════════════════════════════════════════╝
 
 module "nw" {
@@ -19,5 +20,18 @@ module "nw" {
 module "iam" {
   source = "../modules/iam"
 
-  ec2_role_map = { "name" = "dev-ec2-role", "description" = "IAM role for EC2", "partition" = "${local.partition_name}" }
+  ec2_role_map   = { "name" = "dev-ec2-role", "description" = "IAM role for EC2", "partition" = "${local.partition_name}" }
+  ssm_policy_map = { "name" = "dev-iam-policy-ssm-ssh", "description" = "IAM Policy for SSM Start SSH Session.", "partition" = "${local.partition_name}", "region" = "${local.region_name}", "account" = "${local.account_id}", "instanceid" = module.ec2.ec2_instance_id }
+}
+
+module "ec2" {
+  source = "../modules/ec2"
+
+  key_name                  = "keypair.pem"
+  private_key_file_name     = "./.keypair/keypair.pem"
+  securitygroup_map         = { "name" = "dev-ec2-sg", "description" = "EC2 Security Group" }
+  vpc_id                    = module.nw.vpc_id
+  subnet_id                 = module.nw.subnet_id
+  ec2_instance_profile_name = module.iam.ec2_instance_profile_name
+  ec2_map                   = { "name" = "dev-ec2", "instancetype" = "t3.large", "volname" = "dev-ebs-root", "volumesize" = "30" }
 }
