@@ -2,6 +2,7 @@
 # ║ EC2 Dev Environment For Remote SSH Stack - Terraform main.tf module                                                                              ║
 # ╠═════════════════╤═══════════════════════════════════╤════════════════════════════════════════════════════════════════════════════════════════════╣
 # ║ nw              │ ./modules/vpc_subnet              │ invoke network module.                                                                     ║
+# ║ iam             │ ./modules/iam                     │ invoke iam module.                                                                         ║
 # ╚═════════════════╧═══════════════════════════════════╧════════════════════════════════════════════════════════════════════════════════════════════╝
 
 module "nw" {
@@ -13,4 +14,10 @@ module "nw" {
   igw_name   = "dev-igw"
   rtb_name   = "dev-public-rtb"
   vpcep_map  = { "name" = "dev-vpcep-gw-s3", "type" = "Gateway", "service" = "com.amazonaws.${local.region_name}.s3" }
+}
+
+module "iam" {
+  source = "../modules/iam"
+
+  ec2_role_map = { "name" = "dev-ec2-role", "description" = "IAM role for EC2", "partition" = "${local.partition_name}" }
 }

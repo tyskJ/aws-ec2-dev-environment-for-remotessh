@@ -1,0 +1,22 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "AllowEC2StartStop",
+      "Effect": "Allow",
+      "Action": ["ec2:StartInstances", "ec2:StopInstances"],
+      "Resource": [
+        "arn:${Partition}:ec2:${Region}:${Account}:instance/${instance_id}"
+      ]
+    },
+    {
+      "Sid": "AllowStartSession",
+      "Effect": "Allow",
+      "Action": ["ssm:StartSession"],
+      "Resource": [
+        "arn:${Partition}:ec2:${Region}:${Account}:instance/${instance_id}",
+        "arn:${Partition}:ssm:${Region}::document/AWS-StartSSHSession"
+      ]
+    }
+  ]
+}
