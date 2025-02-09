@@ -24,6 +24,7 @@ module "iam" {
   ssm_policy_map = { "name" = "dev-iam-policy-ssm-ssh", "description" = "IAM Policy for SSM Start SSH Session.", "partition" = "${local.partition_name}", "region" = "${local.region_name}", "account" = "${local.account_id}", "instanceid" = module.ec2.ec2_instance_id }
   iam_user_map   = { "name" = "dev-iam-user-ssm", "force_destroy" = true }
   iam_group_name = "dev-iam-grp-ssm"
+  pgp_key        = var.pgp_value
 }
 
 module "ec2" {

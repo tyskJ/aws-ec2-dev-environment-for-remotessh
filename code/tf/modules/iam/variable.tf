@@ -5,6 +5,7 @@
 # ║ ssm_policy_map  │ map(string)                       │ SSM Policy settings map.                                                                   ║
 # ║ iam_user_map    │ map(string)                       │ IAM User settings map.                                                                     ║
 # ║ iam_group_name  │ string                            │ IAM Group Name.                                                                            ║
+# ║ pgp_key         │ -                                 │ PGP Key.                                                                                   ║
 # ╚═════════════════╧═══════════════════════════════════╧════════════════════════════════════════════════════════════════════════════════════════════╝
 
 variable "ec2_role_map" {
@@ -25,4 +26,9 @@ variable "iam_user_map" {
 variable "iam_group_name" {
   type        = string
   description = "IAM Group Name."
+}
+
+variable "pgp_key" {
+  type        = string
+  description = "PGP Key."
 }

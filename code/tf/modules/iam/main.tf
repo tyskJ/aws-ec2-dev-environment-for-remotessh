@@ -8,6 +8,7 @@
 # ║ iam_user                │ aws_iam_user                      │ IAM User.(No login management console)                                             ║
 # ║ iam_group_member        │ aws_iam_group_membership          │ IAM User add to IAM Group.                                                         ║
 # ║ group_attach_policy     │ aws_iam_group_policy_attachment   │ IAM Policy Attachment to IAM Group.                                                ║
+# ║ access_key              │ aws_iam_access_key                │ AccessKeyId and SecretAccessKey.                                                   ║
 # ╚═════════════════════════╧═══════════════════════════════════╧════════════════════════════════════════════════════════════════════════════════════╝
 
 resource "aws_iam_role" "ec2_role" {
@@ -66,4 +67,9 @@ resource "aws_iam_group_membership" "iam_group_member" {
 resource "aws_iam_group_policy_attachment" "group_attach_policy" {
   group      = aws_iam_group.iam_group.name
   policy_arn = aws_iam_policy.ssm_policy.arn
+}
+
+resource "aws_iam_access_key" "access_key" {
+  user    = aws_iam_user.iam_user.name
+  pgp_key = var.pgp_key
 }
