@@ -95,18 +95,54 @@
 
   terraform plan
 
-. デプロイ
+.. note::
+
+  * 計画時に *pgpキー* の入力が求められます
+  * 作成した *dev-tf.public.gpg.base64* の中身を貼り付けてEnterを押してください
+
+6. デプロイ
 ---------------------------------------------------------------------
 .. code-block:: bash
 
   terraform apply -auto-approve
 
-. pemファイル作成
+.. note::
+
+  * デプロイ時に *pgpキー* の入力が求められます
+  * 作成した *dev-tf.public.gpg.base64* の中身を貼り付けてEnterを押してください
+
+7. pemファイル移動
 ---------------------------------------------------------------------
-. ssm用ユーザーのプロファイル作成
+* カレントディレクトに作成された *./keypair/keypair.pem* を *~/.ssh* フォルダに移動する ( *.ssh* フォルダがない場合は作成すること)
+
+8. ssm用ユーザーのプロファイル作成
 ---------------------------------------------------------------------
-. *~/.ssh/config* 作成
+* outputしたSecretAccessKeyをBase64デコードし、値を確認する
+
+.. code-block:: bash
+
+  terraform output -raw secretaccesskey | base64 --decode | gpg -r dev-tf
+
+* デコードしたSecretAccessKeyと、デプロイ時にプロンプトに表示されるAccessKeyIdを使用し、 *dev* プロファイルを作成する (デフォルトリージョンは *ap-northeast-1* )
+
+.. code-block:: bash
+
+  aws configure --profile dev
+
+
+9. *~/.ssh/config* 作成
 ---------------------------------------------------------------------
+* *config* ファイルに以下内容を追記する
+
+.. code-block::
+
+  Host devserver
+    HostName "i-XXXX" # デプロイしたEC2インスタンスID
+    Port 22
+    User ec2-user
+    IdentityFile ~/.ssh/keypair.pem
+    ProxyCommand C:\Program Files\Amazon\AWSCLIV2\aws.exe ssm start-session --target %h --document-name AWS-StartSSHSession --parameters portNumber=%p --profile dev
+
 
 後片付け - ローカル -
 =====================================================================
@@ -121,7 +157,7 @@
 .. code-block:: bash
 
   aws s3 rm s3://tf-20250208/ --recursive --profile admin
-  aws s3 rb s3://ep001-tf-20250208 --profile admin
+  aws s3 rb s3://tf-20250208 --profile admin
 
 .. note::
 
@@ -133,8 +169,15 @@
 
 .. code-block:: bash
 
-  gpg --delete-keys dev-tf
   gpg --delete-secret-keys dev-tf
+  gpg --delete-keys dev-tf
+
+4. エクスポートした公開鍵/秘密鍵ペア削除
+---------------------------------------------------------------------
+* エクスポートした公開鍵/秘密鍵ペアを削除する
+
+.. code-block:: bash
+
   rm -rf ./dev-tf.public.gpg ./dev-tf.private.gpg ./dev-tf.public.gpg.base64
 
 参考資料
