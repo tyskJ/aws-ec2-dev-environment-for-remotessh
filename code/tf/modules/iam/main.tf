@@ -5,6 +5,9 @@
 # ║ ec2_ssm_attach          │ aws_iam_role_policy_attachment    │ Attach ssm policy to EC2 role.                                                     ║
 # ║ ec2_instance_profile    │ aws_iam_instance_profile          │ EC2 instance profile.                                                              ║
 # ║ ssm_policy              │ aws_iam_policy                    │ SSM Policy.                                                                        ║
+# ║ iam_user                │ aws_iam_user                      │ IAM User.(No login management console)                                             ║
+# ║ iam_group_member        │ aws_iam_group_membership          │ IAM User add to IAM Group.                                                         ║
+# ║ group_attach_policy     │ aws_iam_group_policy_attachment   │ IAM Policy Attachment to IAM Group.                                                ║
 # ╚═════════════════════════╧═══════════════════════════════════╧════════════════════════════════════════════════════════════════════════════════════╝
 
 resource "aws_iam_role" "ec2_role" {
@@ -40,4 +43,27 @@ resource "aws_iam_policy" "ssm_policy" {
   tags = {
     Name = var.ssm_policy_map.name
   }
+}
+
+resource "aws_iam_user" "iam_user" {
+  name          = var.iam_user_map.name
+  force_destroy = var.iam_user_map.force_destroy
+  tags = {
+    Name = var.iam_user_map.name
+  }
+}
+
+resource "aws_iam_group" "iam_group" {
+  name = var.iam_group_name
+}
+
+resource "aws_iam_group_membership" "iam_group_member" {
+  name  = aws_iam_group.iam_group.name
+  users = [aws_iam_user.iam_user.name]
+  group = aws_iam_group.iam_group.name
+}
+
+resource "aws_iam_group_policy_attachment" "group_attach_policy" {
+  group      = aws_iam_group.iam_group.name
+  policy_arn = aws_iam_policy.ssm_policy.arn
 }

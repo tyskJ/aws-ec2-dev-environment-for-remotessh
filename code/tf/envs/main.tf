@@ -22,6 +22,8 @@ module "iam" {
 
   ec2_role_map   = { "name" = "dev-ec2-role", "description" = "IAM role for EC2", "partition" = "${local.partition_name}" }
   ssm_policy_map = { "name" = "dev-iam-policy-ssm-ssh", "description" = "IAM Policy for SSM Start SSH Session.", "partition" = "${local.partition_name}", "region" = "${local.region_name}", "account" = "${local.account_id}", "instanceid" = module.ec2.ec2_instance_id }
+  iam_user_map   = { "name" = "dev-iam-user-ssm", "force_destroy" = true }
+  iam_group_name = "dev-iam-grp-ssm"
 }
 
 module "ec2" {
