@@ -33,9 +33,9 @@ export class Iam extends Construct {
     const jsonData = fs.readFileSync(filePath, "utf8");
     const jsonPolicy = JSON.parse(
       jsonData
-        .replace("/{Partition}/g", props.pseudo.partition)
-        .replace("/{Region}/g", props.pseudo.region)
-        .replace("/{Account}/g", props.pseudo.accountId)
+        .replace(/{Partition}/g, props.pseudo.partition)
+        .replace(/{Region}/g, props.pseudo.region)
+        .replace(/{Account}/g, props.pseudo.accountId)
     );
     const ssmPolicy = new iam.ManagedPolicy(this, props.ssmPolicy.id, {
       managedPolicyName: props.ssmPolicy.policyName,
