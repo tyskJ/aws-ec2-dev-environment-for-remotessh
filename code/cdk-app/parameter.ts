@@ -172,6 +172,6 @@ export const devParameter: Parameter = {
     apiTerm: false,
     ebsOpt: false,
     volSize: 30,
-    tags: [{ key: "Name", value: "ep001-ec2" }],
+    tags: [{ key: "Name", value: "dev-ec2" }],
   },
 };
