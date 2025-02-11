@@ -2,6 +2,8 @@ import * as cdk from "aws-cdk-lib";
 import { Construct } from "constructs";
 import { Parameter } from "../../parameter";
 import { Network } from "../construct/network";
+import { Iam } from "../construct/iam";
+import { Ec2 } from "../construct/ec2";
 
 export class CdkAppStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props: Parameter) {
@@ -18,6 +20,24 @@ export class CdkAppStack extends cdk.Stack {
       pseudo: pseudo,
       vpc: props.vpc,
       subnet: props.subnet,
+    });
+
+    // IAM Construct
+    const iam = new Iam(this, "Iam", {
+      pseudo: pseudo,
+      ssmPolicy: props.ssmPolicy,
+      ec2Role: props.ec2Role,
+    });
+
+    // EC2 Construct
+    const ec2 = new Ec2(this, "Ec2", {
+      pseudo: pseudo,
+      vpc: nw.vpc,
+      subnet: nw.subnet,
+      ec2Role: iam.ec2Role,
+      keyPair: props.keyPair,
+      secg: props.secg,
+      ec2: props.ec2,
     });
   }
 }
