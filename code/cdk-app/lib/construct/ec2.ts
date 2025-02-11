@@ -51,7 +51,7 @@ export class Ec2 extends Construct {
       cdk.Tags.of(keyPair).add(tag.key, tag.value);
     }
     new cdk.CfnOutput(this, "Get" + keyPair.keyName + "Command", {
-      value: `aws ssm get-parameter --name "/ec2/keypair/${keyPair.attrKeyPairId}:1" --region ${props.pseudo.region} --with-decryption --query Parameter.Value --output text --profile admin`,
+      value: `aws ssm get-parameter --name "/ec2/keypair/${keyPair.attrKeyPairId}:1" --region ${props.pseudo.region} --with-decryption --query Parameter.Value --output text --profile admin > keypair.pem && chmod 400 keypair.pem`,
     });
 
     // Instance Profile
