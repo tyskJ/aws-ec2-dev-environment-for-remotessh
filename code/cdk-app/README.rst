@@ -58,6 +58,33 @@
 
   cdk deploy --profile admin
 
+2. pemファイル作成
+---------------------------------------------------------------------
+* デプロイ完了時、プロンプトに表示される *Ec2GetdevkeypairCommand* を実行する
+* カレントディレクトに作成された *keypair.pem* を *~/.ssh* フォルダに移動する ( *.ssh* フォルダがない場合は作成すること)
+
+3. ssm用ユーザーのプロファイル作成
+---------------------------------------------------------------------
+* デプロイ完了時、プロンプトに表示される *IamGetSecretsCommand* を実行する
+* 取得したアクセスキーID/シークレットアクセスキーを使用し、 *dev* プロファイルを作成する (デフォルトリージョンは *ap-northeast-1* )
+
+4. *~/.ssh/config* 作成
+---------------------------------------------------------------------
+* *config* ファイルに以下内容を追記する
+
+.. code-block::
+
+  Host devserver
+    HostName "i-XXXX" # デプロイしたEC2インスタンスID
+    Port 22
+    User ec2-user
+    IdentityFile ~/.ssh/keypair.pem
+    ProxyCommand C:\Program Files\Amazon\AWSCLIV2\aws.exe ssm start-session --target %h --document-name AWS-StartSSHSession --parameters portNumber=%p --profile dev
+
+.. code-block:: bash
+
+  aws configure --profile dev
+
 後片付け - ローカル -
 =====================================================================
 1. 環境削除
