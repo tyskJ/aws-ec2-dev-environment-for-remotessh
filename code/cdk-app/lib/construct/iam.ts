@@ -8,6 +8,7 @@
 import * as cdk from "aws-cdk-lib";
 import { Construct } from "constructs";
 import * as iam from "aws-cdk-lib/aws-iam";
+import * as secretsmanager from "aws-cdk-lib/aws-secretsmanager";
 import { iamPolicyInfo } from "../../parameter";
 import { iamRoleInfo } from "../../parameter";
 import * as fs from "fs";
@@ -59,6 +60,23 @@ export class Iam extends Construct {
       groups: [iamGroup],
     });
     cdk.Tags.of(iamUser).add("Name", "dev-iam-user");
+
+    // AccessKey
+    const accessKey = new iam.AccessKey(this, "accessKey", {
+      user: iamUser,
+    });
+
+    // Secrets Manager
+    const secrets = new secretsmanager.Secret(this, "secrets", {
+      secretName: "dev-secrets",
+      secretObjectValue: {
+        accessKey: cdk.SecretValue.unsafePlainText(accessKey.accessKeyId),
+        secretKey: accessKey.secretAccessKey,
+      },
+    });
+    new cdk.CfnOutput(this, "GetSecretsCommand", {
+      value: `aws secretsmanager get-secret-value --secret-id ${secrets.secretArn} --query SecretString --output text --profile admin`,
+    });
   }
   /*
   ╔════════════════════════════════════════════════════════════════════════════════════════════════════════════════╗
