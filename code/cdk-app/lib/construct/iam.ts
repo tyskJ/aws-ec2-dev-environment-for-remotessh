@@ -25,6 +25,7 @@ export class Iam extends Construct {
   constructor(scope: Construct, id: string, props: IamProps) {
     super(scope, id);
 
+    // SSM Policy
     const filePath = path.join(
       `${__dirname}`,
       "../json/policy/",
@@ -43,7 +44,21 @@ export class Iam extends Construct {
       document: iam.PolicyDocument.fromJson(jsonPolicy),
     });
 
+    // EC2 Role
     this.ec2Role = this.createIamRole(this, props.ec2Role);
+
+    // IAM Group
+    const iamGroup = new iam.Group(this, "iamGroup", {
+      groupName: "dev-iam-group",
+      managedPolicies: [ssmPolicy],
+    });
+
+    // IAM User
+    const iamUser = new iam.User(this, "iamUser", {
+      userName: "dev-iam-user",
+      groups: [iamGroup],
+    });
+    cdk.Tags.of(iamUser).add("Name", "dev-iam-user");
   }
   /*
   ╔════════════════════════════════════════════════════════════════════════════════════════════════════════════════╗
