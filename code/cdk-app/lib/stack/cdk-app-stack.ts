@@ -20,6 +20,9 @@ export class CdkAppStack extends cdk.Stack {
       pseudo: pseudo,
       vpc: props.vpc,
       subnet: props.subnet,
+      nacl: props.nacl,
+      rtb: props.rtb,
+      s3GwEp: props.s3GwEp,
     });
 
     // IAM Construct
