@@ -28,6 +28,7 @@ export class Ec2 extends Construct {
   constructor(scope: Construct, id: string, props: Ec2Props) {
     super(scope, id);
 
+    // Security Group
     const secg = new ec2.CfnSecurityGroup(this, props.secg.id, {
       vpcId: props.vpc.attrVpcId,
       groupDescription: props.secg.description,
@@ -37,6 +38,7 @@ export class Ec2 extends Construct {
       cdk.Tags.of(secg).add(tag.key, tag.value);
     }
 
+    // Key Pair
     const keyPair = new ec2.CfnKeyPair(this, props.keyPair.id, {
       keyName: props.keyPair.keyName,
       keyType: props.keyPair.keyType,
@@ -52,6 +54,7 @@ export class Ec2 extends Construct {
       value: `aws ssm get-parameter --name "/ec2/keypair/${keyPair.attrKeyPairId}:1" --region ${props.pseudo.region} --with-decryption --query Parameter.Value --output text --profile admin`,
     });
 
+    // Instance Profile
     const instanceProfile = new iam.CfnInstanceProfile(
       this,
       "instanceprofile",
@@ -60,6 +63,8 @@ export class Ec2 extends Construct {
         instanceProfileName: props.ec2Role.roleName,
       }
     );
+
+    // EC2 Instance
     const ec2Instance = new ec2.CfnInstance(this, props.ec2.id, {
       instanceType: props.ec2.instanceType,
       keyName: keyPair.keyName,
